@@ -6,20 +6,25 @@ import (
 	"kaffein/internal/dto"
 	"kaffein/libraries/common"
 	"net/http"
+	"os"
 	"strconv"
 )
 
+// HandlerGetCapacity handles the capacity calculation request
 func HandlerGetCapacity(w http.ResponseWriter, r *http.Request) {
 	data := make(map[string]interface{})
 
+	// Retrieve the file from the form
 	file, handler, err := r.FormFile("videoCapacity")
 	if err != nil {
-		data["validationError"] = "Error retrieving the file"
-		respondWithJSON(w, http.StatusBadRequest, data)
-		return
+		//data["validationError"] = "Error retrieving the file"
+		//respondWithJSON(w, http.StatusBadRequest, data)
+		//return
+		handler = nil
+	} else {
+		defer file.Close()
 	}
-	defer file.Close()
-
+	// Validate the input
 	reqInput := &dto.RequestCapacityVideo{File: handler}
 	validationErrors := validation.ValidateInputVideo(reqInput, handler)
 	if len(validationErrors) > 0 {
@@ -28,13 +33,21 @@ func HandlerGetCapacity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path, err := common.SaveFileToDirectory(file, "temp", handler.Filename)
+	// Save the file to a temporary directory
+	path, err := common.SaveFileToDirectory(file, baseDir, handler.Filename)
 	if err != nil {
 		data["validationError"] = "Error saving file: " + err.Error()
 		respondWithJSON(w, http.StatusBadRequest, data)
 		return
 	}
+	defer func() {
+		if err := os.Remove(path); err != nil {
+			data["validationError"] = "Error removing file: " + err.Error()
+			respondWithJSON(w, http.StatusBadRequest, data)
+		}
+	}()
 
+	// Open the video file
 	video, err := gocv.VideoCaptureFile(path)
 	if err != nil {
 		data["validationError"] = "Error opening video file: " + err.Error()
@@ -49,6 +62,7 @@ func HandlerGetCapacity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Read the first frame
 	frame := gocv.NewMat()
 	defer frame.Close()
 
@@ -60,9 +74,11 @@ func HandlerGetCapacity(w http.ResponseWriter, r *http.Request) {
 
 	// Calculate the maximum hidden message capacity
 	frameCount := int(video.Get(gocv.VideoCaptureFrameCount))
-	frameSize := frame.Rows() * frame.Cols() * 3
+	frameSize := frame.Rows() * frame.Cols() * 3 // 3 for RGB channels
 	maxHiddenMessage := ((frameSize * frameCount) / 8) - 1
 	data["capacity"] = strconv.Itoa(maxHiddenMessage)
+
+	// Respond with the calculated capacity
 	respondWithJSON(w, http.StatusOK, data)
 }
 

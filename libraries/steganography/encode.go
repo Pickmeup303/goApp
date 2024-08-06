@@ -88,13 +88,16 @@ func (v *videoSteganography) writeVideo() error {
 	}
 	defer writer.Close()
 
-	msg := stringToBinary(v.message + string(emmit))
+	msg := stringToBinary(v.message)
 	lengths2b := len(msg)
 
 	maxMessage := ((width * height * 3 * int(video.Get(gocv.VideoCaptureFrameCount))) / 8) - 1
 	if maxMessage <= lengths2b {
 		return errors.New("message too long")
 	}
+
+	msg = append(msg, stringToBinary(string(emmit))...)
+	lengths2b = len(msg)
 
 	msgIndex := 0
 	for {

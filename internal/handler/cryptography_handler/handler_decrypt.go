@@ -5,6 +5,7 @@ import (
 	"kaffein/libraries/common"
 	"kaffein/libraries/steganography"
 	"net/http"
+	"os"
 	"strconv"
 )
 
@@ -51,11 +52,17 @@ func handleDecrypt(w http.ResponseWriter, r *http.Request, data map[string]inter
 	}
 
 	// save object file to directory path
-	pathVideo, err := common.SaveFileToDirectory(file, "temp", handler.Filename)
+	pathVideo, err := common.SaveFileToDirectory(file, baseDir, handler.Filename)
 	if err != nil {
 		handleError(w, data, "Failed to save file: "+err.Error(), pageViewDecrypt)
 		return
 	}
+	defer func() {
+		if err := os.Remove(pathVideo); err != nil {
+			handleError(w, data, "Error removing file: "+err.Error(), pageViewDecrypt)
+			return
+		}
+	}()
 
 	// extracted hidden message
 	videoExtracted := steganography.NewVideoSteganoGraphy()
@@ -73,5 +80,6 @@ func handleDecrypt(w http.ResponseWriter, r *http.Request, data map[string]inter
 	}
 
 	data["plainText"] = plainText
+	delete(data, "formValues")
 	renderTemplate(w, data, pageViewDecrypt)
 }

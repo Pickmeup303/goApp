@@ -1,21 +1,35 @@
 package cryptography_handler
 
 import (
+	"fmt"
+	"io/fs"
 	"kaffein/internal/dto"
 	"kaffein/libraries/common"
 	"kaffein/libraries/steganography"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 var (
 	pageView   = "index"
+	baseDir    = "temp"
 	validation = common.NewValidation()
 	assets     = common.Assets(nil)
 )
 
 // HandlerEncrypt handles the GET and POST requests for the index page
 func HandlerEncrypt(w http.ResponseWriter, r *http.Request) {
+	// add assets
+	registerAssets := map[string][]string{
+		"js": {
+			"/resources/js/blob.js",
+		},
+	}
+
+	assets = common.Assets(registerAssets)
 	data := map[string]interface{}{
 		"assets": assets,
 	}
@@ -33,10 +47,10 @@ func HandlerEncrypt(w http.ResponseWriter, r *http.Request) {
 func handlePost(w http.ResponseWriter, r *http.Request, data map[string]interface{}) {
 	file, handler, err := r.FormFile("file")
 	if err != nil {
-		handler = nil
-	} else {
-		defer file.Close()
+		http.Error(w, "Failed to get file: "+err.Error(), http.StatusBadRequest)
+		return
 	}
+	defer file.Close()
 
 	keyShifter, _ := strconv.Atoi(r.Form.Get("keyShifter"))
 	reqInput := &dto.RequestEncryptInput{
@@ -55,23 +69,23 @@ func handlePost(w http.ResponseWriter, r *http.Request, data map[string]interfac
 		return
 	}
 
-	// save object file to storage
-	pathVideo, err := common.SaveFileToDirectory(file, "temp", handler.Filename)
+	// Save file to directory
+	pathVideo, err := common.SaveFileToDirectory(file, baseDir, handler.Filename)
 	if err != nil {
 		handleError(w, data, "Failed to save file: "+err.Error(), pageView)
 		return
 	}
 
-	// encrypt message using algorithm caesar chiper
+	// Encrypt message using Caesar cipher
 	encrypt, err := common.WrapperCaesarEncrypt(reqInput.Message, reqInput.Alphabet, reqInput.Key)
 	if err != nil {
 		handleError(w, data, "Encryption error: "+err.Error(), pageView)
 		return
 	}
 
-	// embedded to frame
+	// Embed message into video frames
 	videoEmbedded := steganography.NewVideoSteganoGraphy()
-	outputPath, outputFileName, err := videoEmbedded.Encode(pathVideo, "temp", handler.Filename, "FFV1", "avi", encrypt)
+	outputPath, outputFileName, err := videoEmbedded.Encode(pathVideo, baseDir, handler.Filename, "FFV1", "avi", encrypt)
 	if err != nil {
 		handleError(w, data, "Failed to encode video: "+err.Error(), pageView)
 		return
@@ -81,6 +95,29 @@ func handlePost(w http.ResponseWriter, r *http.Request, data map[string]interfac
 		handleError(w, data, "Failed to send file: "+err.Error(), pageView)
 	}
 
+	// Delete the file after success
+	go func() {
+		err := filepath.Walk(baseDir, func(path string, info fs.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
+			// Check if the file name matches
+			if strings.TrimSuffix(info.Name(), filepath.Ext(info.Name())) == strings.TrimSuffix(handler.Filename, filepath.Ext(handler.Filename)) {
+				if err := os.Remove(path); err != nil {
+					fmt.Printf("Failed to delete %s: %v\n", path, err)
+				} else {
+					fmt.Printf("Deleted %s\n", path)
+				}
+			}
+
+			return nil
+		})
+
+		if err != nil {
+			fmt.Printf("Error walking the path %v: %v\n", baseDir, err)
+		}
+	}()
 }
 
 func renderTemplate(w http.ResponseWriter, data map[string]interface{}, view string) {
