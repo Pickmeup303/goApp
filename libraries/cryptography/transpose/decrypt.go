@@ -2,7 +2,7 @@ package transpose
 
 import "strings"
 
-func (t *transpose) Decode() string {
+func (t *transpose) Decrypt() string {
 	textRune := []rune(t.text)
 	rowCount := (len(textRune) + t.col - 1) / t.col
 

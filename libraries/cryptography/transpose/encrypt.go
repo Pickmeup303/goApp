@@ -11,7 +11,7 @@ type transpose struct {
 	padding rune
 }
 
-const Padding = '*'
+const Padding = '\u001F' //Unit Separator
 
 func NewTranspose(text string, colWidth int) *transpose {
 	return &transpose{
@@ -21,7 +21,7 @@ func NewTranspose(text string, colWidth int) *transpose {
 	}
 }
 
-func (t *transpose) Encode() string {
+func (t *transpose) Encrypt() string {
 	textRune := []rune(t.text)
 	rowCount := (len(textRune) / t.col) + 1
 

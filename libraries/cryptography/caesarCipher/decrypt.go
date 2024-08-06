@@ -4,12 +4,15 @@ import (
 	"strings"
 )
 
-func (e *elements) Decode() string {
+func (e *elements) Decrypt() (string, error) {
 	e.filter()
+	if err := e.validation(); err != nil {
+		return "", err
+	}
 	e.decryptMissingChar()
-	e.shifter()
+	e.decryptShifter()
 	e.decryptSubstitution()
-	return e.finalResult
+	return e.finalResult, nil
 }
 
 func (e *elements) decryptMissingChar() {
@@ -18,6 +21,22 @@ func (e *elements) decryptMissingChar() {
 	runeText := []rune(arr[0])
 	e.tableOne = append(e.tableOne, secretEmmit...)
 	e.text = string(runeText)
+}
+
+func (e *elements) decryptShifter() {
+	mapChar := make(map[rune]rune)
+	for i, r := range e.filterResult {
+		index := (i + e.keyShifter) % len(e.filterResult)
+		mapChar[r] = e.filterResult[index]
+	}
+
+	for _, r := range e.tableOne {
+		if newChar, ok := mapChar[r]; ok {
+			e.tableTwo = append(e.tableTwo, newChar)
+		} else {
+			e.tableTwo = append(e.tableTwo, e.modify(r))
+		}
+	}
 }
 
 func (e *elements) decryptSubstitution() {

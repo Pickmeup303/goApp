@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decrypt Video</title>
+    {{range .assets.css}}
+    <link href="{{.}}" rel="stylesheet">
+    {{end}}
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="d-flex">
+    <div id="sidebar" class="bg-dark">
+        <h4 class="p-3">Sidebar</h4>
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link" href="/"><i class="fas fa-home me-2"></i> Encrypt</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link active" href="/decrypt"><i class="fas fa-user me-2"></i> Decrypt</a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Content -->
+    <div id="content" class="w-100">
+        <!-- Navbar -->
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <div class="container-fluid">
+                <button id="sidebarToggle" class="btn">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-sm-8">
+                    <div class="card">
+                        <div class="card-body">
+                            <!-- Error Message -->
+                            {{ if .validationError.Alert }}
+                            <div class="alert alert-danger" role="alert">
+                                {{ .validationError.Alert }}
+                            </div>
+                            {{ end }}
+
+                            <!-- Form -->
+                            <form action="" method="post" enctype="multipart/form-data">
+                                <div class="mb-3">
+                                    <label for="alphabet" class="form-label">Key Alphabet</label>
+                                    <input type="text" class="form-control {{ if .validationError.Alphabet }}is-invalid{{ end }}" name="keyAlphabet" id="alphabet" value="{{ if .formValues.Alphabet }}{{ .formValues.Alphabet }}{{ end }}">
+                                    <div class="invalid-feedback">
+                                        {{ .validationError.Alphabet }}
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="keyShifter" class="form-label">Key Shifter</label>
+                                    <input type="text" class="form-control {{ if .validationError.Key }}is-invalid{{ end }}" name="keyShifter" id="keyShifter" value="{{ if .formValues.Key }}{{ .formValues.Key }}{{ end }}">
+                                    <div class="invalid-feedback">
+                                        {{ .validationError.Key }}
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="file" class="form-label">Upload Video</label>
+                                    <input type="file" class="form-control {{ if .validationError.File }}is-invalid{{ end }}" name="file" id="file" accept="video/*">
+                                    <div class="invalid-feedback">
+                                        {{ .validationError.File }}
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="message" class="form-label">Decrypted Message</label>
+                                    <textarea disabled class="form-control" name="message" id="message" cols="30" rows="10">{{ if .plainText }}{{ .plainText }}{{ end }}</textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <button type="submit" class="btn btn-primary">Submit</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ range .assets.js }}
+<script src="{{ . }}"></script>
+{{ end }}
+</body>
+</html>

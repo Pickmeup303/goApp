@@ -8,12 +8,18 @@ import (
 )
 
 func main() {
-	cfg := config.DefaultConfig()
+	cfg, err := config.DefaultConfig()
+	if err != nil {
+		panic(err)
+	}
 
 	// START ROUTE
 	r := router.NewRouter()
 
-	address := fmt.Sprintf("%s:%s", cfg.ServerHost, cfg.ServerPort)
+	address := fmt.Sprintf("%s:%s", cfg.AppHost, cfg.AppPort)
 	fmt.Printf("Server started at %s\n", address)
-	http.ListenAndServe(address, r)
+	err = http.ListenAndServe(address, r)
+	if err != nil {
+		panic(err)
+	}
 }

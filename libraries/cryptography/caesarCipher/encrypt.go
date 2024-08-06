@@ -1,10 +1,11 @@
 package caesarCipher
 
 import (
+	"errors"
 	"strings"
 )
 
-const emmit = '\u0003'
+const emmit = '\u0003' //End-of-text character
 
 type elements struct {
 	text       string
@@ -32,12 +33,30 @@ func NewCaesarCipher(text, shifterAlphabet string, keyShifter int) *elements {
 	}
 }
 
-func (e *elements) Encode() string {
+func (e *elements) validation() error {
+	if e.text == "" {
+		return errors.New("text is empty")
+	}
+	if len(e.alphabet) < 140 {
+		return errors.New("alphabet must be at least 140 chars or more")
+	}
+	if e.keyShifter <= 0 {
+		return errors.New("key shifter must be greater than zero")
+	}
+	if e.keyShifter == len(e.filterResult) {
+		return errors.New("invalid key shifter, try another key")
+	}
+	return nil
+}
+func (e *elements) Encrypt() (string, error) {
 	e.filter()
+	if err := e.validation(); err != nil {
+		return "", err
+	}
 	e.missingChar()
 	e.shifter()
 	e.substitution()
-	return e.finalResult
+	return e.finalResult, nil
 }
 
 func (e *elements) filter() {
@@ -81,6 +100,9 @@ func (e *elements) shifter() {
 }
 
 func (e *elements) modify(char rune) rune {
+	for _, i2 := range e.tableOne {
+		e.seen[i2] = true
+	}
 	for _, i2 := range e.tableTwo {
 		e.seen[i2] = true
 	}

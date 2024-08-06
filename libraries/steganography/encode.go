@@ -2,123 +2,201 @@ package steganography
 
 import (
 	"errors"
+	"fmt"
 	"gocv.io/x/gocv"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 )
 
-func WriteVideo(file, message, outputFile string) error {
-	video, err := gocv.VideoCaptureFile(file)
+type videoSteganography struct {
+	videoPath  string
+	codec      string
+	saveDir    string
+	outputName string
+	typeVideo  string
+	message    string
+	result
+}
+
+type result struct {
+	outputNameVideo      string
+	outputPathVideo      string
+	outputNameAudio      string
+	outputPathAudio      string
+	outputFinalPathVideo string
+}
+
+func NewVideoSteganoGraphy() *videoSteganography {
+	return &videoSteganography{}
+}
+
+// Encode returning PathFinal Video, Name Final Video, Error
+func (v *videoSteganography) Encode(targetVideo, saveDir, outputName, codec, typeFile, message string) (string, string, error) {
+	v.videoPath = targetVideo
+	v.codec = codec
+	v.saveDir = saveDir
+	v.outputName = outputName
+	v.typeVideo = typeFile
+	v.message = message
+
+	if err := v.writeVideo(); err != nil {
+		return "", "", err
+	}
+	hasAudio, err := v.extractAudio()
+	if err != nil {
+		return "", "", err
+	}
+
+	if hasAudio {
+		if err = v.mergeAudioVideo(); err != nil {
+			return "", "", err
+		}
+		return v.outputFinalPathVideo, v.outputNameVideo, nil
+	}
+	return v.outputPathVideo, v.outputNameVideo, nil
+}
+
+func (v *videoSteganography) writeVideo() error {
+	video, err := gocv.VideoCaptureFile(v.videoPath)
 	if err != nil {
 		return err
 	}
 	defer video.Close()
-
-	if !video.IsOpened() {
-		return errors.New("video tidak terbuka")
-	}
-
-	// Membaca frame pertama untuk mendapatkan ukuran gambar
 	frame := gocv.NewMat()
 	defer frame.Close()
 
-	if !video.Read(&frame) {
-		return errors.New("gagal membaca frame pertama")
+	if ok := video.Read(&frame); !ok {
+		return fmt.Errorf("cannot read frame from %v", v.videoPath)
 	}
+	fps := video.Get(gocv.VideoCaptureFPS)
+	width := int(video.Get(gocv.VideoCaptureFrameWidth))
+	height := int(video.Get(gocv.VideoCaptureFrameHeight))
 
-	tempAudioFile := "temp/audio/temp.mp3"
-	if err = extractAudio(file, tempAudioFile); err != nil {
+	v.outputNameVideo = strings.Split(v.outputName, ".")[0] + "." + v.typeVideo
+	videoDir := filepath.Join(v.saveDir, "video")
+	v.outputPathVideo = filepath.Join(videoDir, v.outputNameVideo)
+
+	if err = os.MkdirAll(videoDir, os.ModePerm); err != nil {
 		return err
 	}
-	defer os.Remove(tempAudioFile)
-	// Inisialisasi VideoWriter
-	writer, err := gocv.VideoWriterFile(outputFile, "FFV1", video.Get(gocv.VideoCaptureFPS), frame.Cols(), frame.Rows(), true)
+
+	writer, err := gocv.VideoWriterFile(v.outputPathVideo, v.codec, fps, width, height, true)
 	if err != nil {
 		return err
 	}
 	defer writer.Close()
 
-	// Konversi pesan menjadi biner
-	messageBinary := stringToBinary(message)
-	lengthMessage := len(messageBinary)
+	msg := stringToBinary(v.message + string(emmit))
+	lengths2b := len(msg)
 
-	index := 0
+	maxMessage := ((width * height * 3 * int(video.Get(gocv.VideoCaptureFrameCount))) / 8) - 1
+	if maxMessage <= lengths2b {
+		return errors.New("message too long")
+	}
+
+	msgIndex := 0
 	for {
-		if ok := video.Read(&frame); !ok {
+		if !video.Read(&frame) {
 			break
 		}
 		if frame.Empty() {
 			continue
 		}
-
-		for x := 0; x < frame.Rows(); x++ {
-			for y := 0; y < frame.Cols(); y++ {
-				if index >= lengthMessage {
-					break
-				}
-
-				// Mendapatkan nilai pixel
-				pixel := frame.GetVecbAt(x, y)
+		gocv.CvtColor(frame, &frame, gocv.ColorBGRToRGB)
+		for y := 0; y < height && msgIndex < lengths2b; y++ {
+			for x := 0; x < width && msgIndex < lengths2b; x++ {
+				pixel := frame.GetVecbAt(y, x)
 				b, g, r := pixel[0], pixel[1], pixel[2]
 
-				// Menyisipkan bit pesan ke dalam pixel
-				if index < lengthMessage {
-					b = (b & 0xFE) | messageBinary[index]
-					index++
+				// Modify the least significant bit (LSB) of each color channel
+				if msgIndex < lengths2b {
+					r = (r & 0xFE) | msg[msgIndex]
+					msgIndex++
 				}
-				if index < lengthMessage {
-					g = (g & 0xFE) | messageBinary[index]
-					index++
+				if msgIndex < lengths2b {
+					g = (g & 0xFE) | msg[msgIndex]
+					msgIndex++
 				}
-				if index < lengthMessage {
-					r = (r & 0xFE) | messageBinary[index]
-					index++
+				if msgIndex < lengths2b {
+					b = (b & 0xFE) | msg[msgIndex]
+					msgIndex++
 				}
 
-				// Menetapkan nilai pixel yang baru
-				frame.SetUCharAt(x, y*3, b)
-				frame.SetUCharAt(x, y*3+1, g)
-				frame.SetUCharAt(x, y*3+2, r)
-			}
-			if index >= lengthMessage {
-				break
+				// Set the modified pixel values
+				frame.SetUCharAt(y, x*3, b)
+				frame.SetUCharAt(y, x*3+1, g)
+				frame.SetUCharAt(y, x*3+2, r)
 			}
 		}
 
-		// Menulis frame ke video keluaran
 		writer.Write(frame)
 	}
 
-	if err = mergeAudio(outputFile, tempAudioFile, outputFile); err != nil {
-		return err
-	}
-
 	return nil
 }
 
-func extractAudio(inputVideo, outputAudio string) error {
-	// Check if the directory "temp/audio" exists, and if not, create it.
-	if _, err := os.Stat("temp/audio"); os.IsNotExist(err) {
-		err = os.MkdirAll("temp/audio", 0777)
-		if err != nil {
-			return err
+func (v *videoSteganography) extractAudio() (bool, error) {
+	v.outputNameAudio = strings.Split(v.outputName, ".")[0] + ".mp3"
+	audioDir := filepath.Join(v.saveDir, "audio")
+	v.outputPathAudio = filepath.Join(audioDir, v.outputNameAudio)
+
+	cmd := exec.Command(
+		"ffprobe",
+		"-v", "error",
+		"-select_streams", "a:0",
+		"-show_entries", "stream=codec_type",
+		"-of", "default=noprint_wrappers=1:nokey=1",
+		v.videoPath,
+	)
+	output, err := cmd.Output()
+	if err != nil {
+		return false, err
+	}
+
+	if strings.TrimSpace(string(output)) == "audio" {
+
+		if err = os.MkdirAll(audioDir, os.ModePerm); err != nil {
+			return false, err
 		}
+
+		cmd = exec.Command("ffmpeg",
+			"-i", v.videoPath,
+			"-q:a", "0",
+			"-map", "a",
+			v.outputPathAudio,
+		)
+		output, err = cmd.CombinedOutput()
+		if err != nil {
+			return false, fmt.Errorf("ffmpeg error: %v\nOutput: %s", err, string(output))
+		}
+		return true, nil
 	}
 
-	// Use ffmpeg to extract audio from the input video.
-	command := exec.Command("ffmpeg", "-i", inputVideo, "-q:a", "0", "-map", "a", outputAudio)
-	err := command.Run()
-	if err != nil {
-		return err
-	}
-	return nil
+	return false, nil
 }
 
-func mergeAudio(inputVideo, inputAudio, outputVideo string) error {
-	command := exec.Command("ffmpeg", "-i", inputVideo, "-i", inputAudio, "-c", "copy", "-map", "0:v:0", "-map", "1:a:0", outputVideo)
-	err := command.Run()
-	if err != nil {
+func (v *videoSteganography) mergeAudioVideo() error {
+	finalVideoDir := filepath.Join(v.saveDir, "final")
+	v.outputFinalPathVideo = filepath.Join(finalVideoDir, v.outputNameVideo)
+	if err := os.MkdirAll(finalVideoDir, os.ModePerm); err != nil {
 		return err
+	}
+
+	cmd := exec.Command(
+		"ffmpeg",
+		"-i", v.outputPathVideo,
+		"-i", v.outputPathAudio,
+		"-c:v", "copy",
+		"-c:a", "copy",
+		"-y",
+		v.outputFinalPathVideo,
+	)
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("ffmpeg error: %v\nOutput: %s", err, string(output))
 	}
 	return nil
 }

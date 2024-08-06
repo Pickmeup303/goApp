@@ -1,17 +1,19 @@
 package router
 
-import "net/http"
+import (
+	"kaffein/internal/handler"
+	"kaffein/internal/handler/cryptography_handler"
+	"net/http"
+)
 
 func NewRouter() *http.ServeMux {
 	mux := http.NewServeMux()
-	// property assets
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
-	// add route pattern
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		msg := "Hello, world"
-		w.Write([]byte(msg)) // Write response to the client
-	})
+	// Handle static files with correct stripping of the "/resources/" prefix
+	mux.Handle("/resources/", http.StripPrefix("/resources/", handler.ResourcesHandler()))
 
+	mux.HandleFunc("/", cryptography_handler.HandlerEncrypt)
+	mux.HandleFunc("/decrypt", cryptography_handler.HandlerDecrypt)
+	mux.HandleFunc("/information_capacity", cryptography_handler.HandlerGetCapacity)
 	return mux
 }
