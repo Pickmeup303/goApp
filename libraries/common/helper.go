@@ -69,7 +69,7 @@ func Assets(st map[string][]string) map[string][]string {
 		"css": {
 			cfg.AppURI + "/resources/css/bootstrap.min.css",
 			cfg.AppURI + "/resources/css/main.css",
-			"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css",
+			cfg.AppURI + "/resources/css/font-awesome/all.min.css",
 		},
 		"js": {
 			cfg.AppURI + "/resources/js/bootstrap.bundle.min.js",

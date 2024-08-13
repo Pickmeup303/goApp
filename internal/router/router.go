@@ -15,5 +15,6 @@ func NewRouter() *http.ServeMux {
 	mux.HandleFunc("/", cryptography_handler.HandlerEncrypt)
 	mux.HandleFunc("/decrypt", cryptography_handler.HandlerDecrypt)
 	mux.HandleFunc("/information_capacity", cryptography_handler.HandlerGetCapacity)
+
 	return mux
 }

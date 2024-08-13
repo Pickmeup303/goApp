@@ -107,7 +107,7 @@ func (v *videoSteganography) writeVideo() error {
 		if frame.Empty() {
 			continue
 		}
-		gocv.CvtColor(frame, &frame, gocv.ColorBGRToRGB)
+		//gocv.CvtColor(frame, &frame, gocv.ColorBGRToRGB)
 		for y := 0; y < height && msgIndex < lengths2b; y++ {
 			for x := 0; x < width && msgIndex < lengths2b; x++ {
 				pixel := frame.GetVecbAt(y, x)
