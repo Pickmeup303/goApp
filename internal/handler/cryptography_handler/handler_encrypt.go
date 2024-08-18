@@ -23,13 +23,13 @@ var (
 // HandlerEncrypt handles the GET and POST requests for the index page
 func HandlerEncrypt(w http.ResponseWriter, r *http.Request) {
 	// add assets
-	registerAssets := map[string][]string{
-		"js": {
-			"/resources/js/blob.js",
-		},
-	}
+	//registerAssets := map[string][]string{
+	//	"js": {
+	//		"/resources/js/blob.js",
+	//	},
+	//}
 
-	assets = common.Assets(registerAssets)
+	//assets = common.Assets(registerAssets)
 	data := map[string]interface{}{
 		"assets": assets,
 	}
@@ -47,17 +47,19 @@ func HandlerEncrypt(w http.ResponseWriter, r *http.Request) {
 func handlePost(w http.ResponseWriter, r *http.Request, data map[string]interface{}) {
 	file, handler, err := r.FormFile("file")
 	if err != nil {
-		http.Error(w, "Failed to get file: "+err.Error(), http.StatusBadRequest)
-		return
+		file = nil
+	} else {
+		defer file.Close()
 	}
-	defer file.Close()
 
 	keyShifter, _ := strconv.Atoi(r.Form.Get("keyShifter"))
+	keyTranspose, _ := strconv.Atoi(r.Form.Get("keyTranspose"))
 	reqInput := &dto.RequestEncryptInput{
-		Alphabet: r.Form.Get("keyAlphabet"),
-		Key:      keyShifter,
-		Message:  r.Form.Get("message"),
-		File:     handler,
+		Alphabet:     r.Form.Get("keyAlphabet"),
+		KeyShifter:   keyShifter,
+		KeyTranspose: keyTranspose,
+		Message:      r.Form.Get("message"),
+		File:         handler,
 	}
 
 	vErrors := validation.ValidateInputVideo(reqInput, handler)
@@ -77,7 +79,7 @@ func handlePost(w http.ResponseWriter, r *http.Request, data map[string]interfac
 	}
 
 	// Encrypt message using Caesar cipher
-	encrypt, err := common.WrapperCaesarEncrypt(reqInput.Message, reqInput.Alphabet, reqInput.Key)
+	encrypt, err := common.WrapperCaesarEncrypt(reqInput.Message, reqInput.Alphabet, reqInput.KeyShifter, reqInput.KeyTranspose)
 	if err != nil {
 		handleError(w, data, "Encryption error: "+err.Error(), pageView)
 		return
@@ -93,6 +95,7 @@ func handlePost(w http.ResponseWriter, r *http.Request, data map[string]interfac
 
 	if err = common.SendFile(w, outputPath, outputFileName); err != nil {
 		handleError(w, data, "Failed to send file: "+err.Error(), pageView)
+		return
 	}
 
 	// Delete the file after success
@@ -101,8 +104,6 @@ func handlePost(w http.ResponseWriter, r *http.Request, data map[string]interfac
 			if err != nil {
 				return err
 			}
-
-			// Check if the file name matches
 			if strings.TrimSuffix(info.Name(), filepath.Ext(info.Name())) == strings.TrimSuffix(handler.Filename, filepath.Ext(handler.Filename)) {
 				if err := os.Remove(path); err != nil {
 					fmt.Printf("Failed to delete %s: %v\n", path, err)
@@ -110,10 +111,8 @@ func handlePost(w http.ResponseWriter, r *http.Request, data map[string]interfac
 					fmt.Printf("Deleted %s\n", path)
 				}
 			}
-
 			return nil
 		})
-
 		if err != nil {
 			fmt.Printf("Error walking the path %v: %v\n", baseDir, err)
 		}
@@ -121,8 +120,10 @@ func handlePost(w http.ResponseWriter, r *http.Request, data map[string]interfac
 }
 
 func renderTemplate(w http.ResponseWriter, data map[string]interface{}, view string) {
-	if err := common.LoadTemplate(w, data, view); err != nil {
-		http.Error(w, "Template loading error: "+err.Error(), http.StatusInternalServerError)
+	if w.Header().Get("Content-Type") == "" {
+		if err := common.LoadTemplate(w, data, view); err != nil {
+			http.Error(w, "Template loading error: "+err.Error(), http.StatusInternalServerError)
+		}
 	}
 }
 

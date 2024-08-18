@@ -11,7 +11,7 @@ type Config struct {
 	AppURI  string `yaml:"APP_URI"`
 }
 
-func DefaultConfig() (*Config, error) {
+func Default() (*Config, error) {
 	file, err := os.Open("config.yaml")
 	if err != nil {
 		return nil, err

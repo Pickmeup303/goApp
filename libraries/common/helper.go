@@ -60,7 +60,7 @@ func SendFile(w http.ResponseWriter, filePath, fileName string) error {
 }
 
 func Assets(st map[string][]string) map[string][]string {
-	cfg, err := config.DefaultConfig()
+	cfg, err := config.Default()
 	if err != nil {
 		return map[string][]string{}
 	}

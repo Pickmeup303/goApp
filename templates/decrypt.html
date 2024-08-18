@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Decrypt Video</title>
+    <title>Responsive Sidebar</title>
     {{range .assets.css}}
     <link href="{{.}}" rel="stylesheet">
     {{end}}
 </head>
 <body>
 
-<!-- Sidebar -->
 <div class="d-flex">
+    <!-- Sidebar -->
     <div id="sidebar" class="bg-dark">
-        <h4 class="p-3">X~</h4>
+        <h4 class="p-3 text-center">X~</h4>
         <ul class="nav flex-column">
             <li class="nav-item">
                 <a class="nav-link" href="/"><i class="fas fa-home me-2"></i> Encrypt</a>
@@ -41,32 +41,36 @@
                 <div class="col-sm-8">
                     <div class="card">
                         <div class="card-body">
-                            <!-- Error Message -->
                             {{ if .validationError.Alert }}
                             <div class="alert alert-danger" role="alert">
                                 {{ .validationError.Alert }}
                             </div>
                             {{ end }}
-
-                            <!-- Form -->
-                            <form action="" method="post" enctype="multipart/form-data">
+                            <form id="uploadForm" action="" method="post" enctype="multipart/form-data">
                                 <div class="mb-3">
-                                    <label for="alphabet" class="form-label">Key Alphabet</label>
-                                    <input type="text" class="form-control {{ if .validationError.Alphabet }}is-invalid{{ end }}" name="keyAlphabet" id="alphabet" value="{{ if .formValues.Alphabet }}{{ .formValues.Alphabet }}{{ end }}">
+                                    <label for="keyAlphabet" class="form-label">Input Key1</label>
+                                    <textarea class="form-control {{ if .validationError.Alphabet }}is-invalid{{ end }}" name="keyAlphabet" id="keyAlphabet" cols="30" rows="10">{{ if .formValues.Alphabet }}{{ .formValues.Alphabet }}{{ end }}</textarea>
                                     <div class="invalid-feedback">
                                         {{ .validationError.Alphabet }}
                                     </div>
                                 </div>
                                 <div class="mb-3">
-                                    <label for="keyShifter" class="form-label">Key Shifter</label>
-                                    <input type="text" class="form-control {{ if .validationError.Key }}is-invalid{{ end }}" name="keyShifter" id="keyShifter" value="{{ if .formValues.Key }}{{ .formValues.Key }}{{ end }}">
+                                    <label for="keyShifter" class="form-label">Input Key2</label>
+                                    <input type="text" class="form-control {{ if .validationError.KeyShifter }}is-invalid{{ end }}" name="keyShifter" id="keyShifter" value="{{ if .formValues.KeyShifter }}{{ .formValues.KeyShifter }}{{ end }}">
                                     <div class="invalid-feedback">
-                                        {{ .validationError.Key }}
+                                        {{ .validationError.KeyShifter }}
                                     </div>
                                 </div>
                                 <div class="mb-3">
-                                    <label for="file" class="form-label">Upload Video</label>
-                                    <input type="file" class="form-control {{ if .validationError.File }}is-invalid{{ end }}" name="file" id="file" accept="video/*">
+                                    <label for="keyTranspose" class="form-label">Input Key3</label>
+                                    <input type="text" class="form-control {{ if .validationError.KeyTranspose }}is-invalid{{ end }}" name="keyTranspose" id="keyTranspose" value="{{ if .formValues.KeyTranspose }}{{ .formValues.KeyTranspose }}{{ end }}">
+                                    <div class="invalid-feedback">
+                                        {{ .validationError.KeyTranspose }}
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="file_video" class="form-label">Upload Video</label>
+                                    <input type="file" class="form-control {{ if .validationError.File }}is-invalid{{ end }}" name="file" id="file_video" accept="video/*">
                                     <div class="invalid-feedback">
                                         {{ .validationError.File }}
                                     </div>

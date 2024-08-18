@@ -47,11 +47,13 @@ func TestNewTranspose(t *testing.T) {
 			name:   "simple transpose",
 			text:   "Hello World",
 			length: 6,
+			key:    key,
 		},
 		{
 			name:   "less than length",
 			text:   "Hello",
 			length: 6,
+			key:    key,
 		},
 		{
 			name:     "transpose caesar cipher",
@@ -64,8 +66,8 @@ func TestNewTranspose(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			ts := transpose.NewTranspose(tt.text, tt.length).Encrypt()
-			ts2 := transpose.NewTranspose(ts, tt.length).Decrypt()
+			ts := transpose.NewTranspose(tt.text, tt.length, tt.key).Encrypt()
+			ts2 := transpose.NewTranspose(ts, tt.length, tt.key).Decrypt()
 			if ts2 != tt.text {
 				t.Errorf("want %s, got %s", tt.text, ts2)
 			}
@@ -77,8 +79,8 @@ func TestNewTranspose(t *testing.T) {
 					return
 				}
 
-				ts = transpose.NewTranspose(cc, tt.length).Encrypt()
-				ts2 = transpose.NewTranspose(ts, tt.length).Decrypt()
+				ts = transpose.NewTranspose(cc, tt.length, tt.key).Encrypt()
+				ts2 = transpose.NewTranspose(ts, tt.length, tt.key).Decrypt()
 
 				ccDecoded, err := caesarCipher.NewCaesarCipher(ts2, tt.alphabet, tt.key).Decrypt()
 				if err != nil {

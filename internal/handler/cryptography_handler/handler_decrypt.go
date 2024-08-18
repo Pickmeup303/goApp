@@ -36,10 +36,12 @@ func handleDecrypt(w http.ResponseWriter, r *http.Request, data map[string]inter
 	}
 
 	keyShifter, _ := strconv.Atoi(r.Form.Get("keyShifter"))
+	keyTranspose, _ := strconv.Atoi(r.Form.Get("keyTranspose"))
 	reqInput := &dto.RequestDecryptInput{
-		Alphabet: r.Form.Get("keyAlphabet"),
-		Key:      keyShifter,
-		File:     handler,
+		Alphabet:     r.Form.Get("keyAlphabet"),
+		KeyShifter:   keyShifter,
+		KeyTranspose: keyTranspose,
+		File:         handler,
 	}
 
 	vErrors := validation.ValidateInputVideo(reqInput, handler)
@@ -73,7 +75,7 @@ func handleDecrypt(w http.ResponseWriter, r *http.Request, data map[string]inter
 	}
 
 	// decrypt message
-	plainText, err := common.WrapperCaesarDecrypt(extracted, reqInput.Alphabet, reqInput.Key)
+	plainText, err := common.WrapperCaesarDecrypt(extracted, reqInput.Alphabet, reqInput.KeyShifter, reqInput.KeyTranspose)
 	if err != nil {
 		handleError(w, data, "Decode error: "+err.Error(), pageViewDecrypt)
 		return

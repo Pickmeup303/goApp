@@ -10,7 +10,7 @@ import (
 
 func main() {
 	// GET SERVER ADDRESS CONFIG
-	cfg, err := config.DefaultConfig()
+	cfg, err := config.Default()
 	if err != nil {
 		panic(err)
 	}
@@ -30,4 +30,5 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
 }

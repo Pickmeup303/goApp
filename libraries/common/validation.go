@@ -21,11 +21,11 @@ func NewValidation() *Validation {
 	validate := validator.New()
 	en_translator.RegisterDefaultTranslations(validate, trans)
 
-	//// Register custom tag name function
-	//validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
-	//	name := fld.Tag.Get("label")
-	//	return name
-	//})
+	// Register custom tag name function
+	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
+		name := fld.Tag.Get("label")
+		return name
+	})
 	//
 	//// Register custom translations
 	//validate.RegisterTranslation("required", trans, func(ut ut.Translator) error {
